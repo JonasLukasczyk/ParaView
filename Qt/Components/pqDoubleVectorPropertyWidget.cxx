@@ -260,9 +260,18 @@ pqDoubleVectorPropertyWidget::pqDoubleVectorPropertyWidget(
             label->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
             layoutLocal->addWidget(label);
           }
-          pqDoubleLineEdit* lineEdit = new pqDoubleLineEdit(this);
-          lineEdit->setObjectName(QString("DoubleLineEdit%1").arg(i));
-          lineEdit->setUseGlobalPrecisionAndNotation(true);
+
+        //   pqDoubleLineEdit* lineEdit = new pqDoubleLineEdit(this);
+        //   lineEdit->setObjectName(QString("DoubleLineEdit%1").arg(i));
+        //   lineEdit->setUseGlobalPrecisionAndNotation(true);
+
+          pqLineEdit* lineEdit = new pqLineEdit(this);
+          lineEdit->setValidator(new QDoubleValidator(lineEdit));
+          lineEdit->setObjectName("DoubleLineEdit" + QString::number(i));
+          lineEdit->setTextAndResetCursor(
+            QString::number(vtkSMPropertyHelper(smProperty).GetAsDouble(i)));
+
+
           layoutLocal->addWidget(lineEdit);
           this->addPropertyLink(lineEdit, "text2", SIGNAL(textChanged(const QString&)), dvp, i);
 
