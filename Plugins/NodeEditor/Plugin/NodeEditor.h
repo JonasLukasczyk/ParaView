@@ -9,7 +9,6 @@
 
 #include <unordered_map>
 
-class Node;
 
 class NodeEditor : public QDockWidget
 {
@@ -33,11 +32,4 @@ public:
 
 private:
   void constructor();
-
-    QGraphicsScene *scene;
-    QGraphicsEllipseItem *ellipse;
-    QGraphicsRectItem *rectangle;
-    QGraphicsTextItem *text;
-
-    // std::unordered_map<int,Node> nodes;
 };

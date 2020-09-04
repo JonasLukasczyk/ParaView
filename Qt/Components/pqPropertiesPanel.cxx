@@ -818,7 +818,7 @@ void pqPropertiesPanel::apply()
 
   // Grab focus. This ensures other widgets lose focus and take care of any state updating
   // they need to do when they lose focus. Workaround for macOS bug #18626.
-  this->Internals->Ui.Accept->setFocus();
+//   this->Internals->Ui.Accept->setFocus();
 
   if (onlyApplyCurrentPanel)
   {

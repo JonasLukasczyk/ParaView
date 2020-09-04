@@ -15,30 +15,25 @@
 
 #include <iostream>
 
-void NodeEditor::constructor()
-{
-  this->setWindowTitle("Node Editor");
+void NodeEditor::constructor(){
+    this->setWindowTitle("Node Editor");
 
-  QWidget* t_widget = new QWidget(this);
+    QWidget* t_widget = new QWidget(this);
 
-  auto layout = new QVBoxLayout;
-  t_widget->setLayout(layout);
-
-  auto graphicsView = new NodeEditorView;
-  layout->addWidget(graphicsView);
-
-  scene = (QGraphicsScene*)(new NodeEditorScene(this));
-  graphicsView->setScene(scene);
-  graphicsView->setDragMode( QGraphicsView::ScrollHandDrag );
-  graphicsView->setSceneRect(-10000,-10000,20000,20000);
-
-//   auto testNode = new Node(scene);
-
+    auto layout = new QVBoxLayout;
+    t_widget->setLayout(layout);
 
     auto core = pqApplicationCore::instance();
     auto smm = core->getServerManagerModel();
 
-    Node::InitRegistry(smm, scene);
+    auto scene = new NodeEditorScene(smm,this);
+
+    auto graphicsView = new NodeEditorView;
+    graphicsView->setScene(scene);
+    graphicsView->setDragMode( QGraphicsView::ScrollHandDrag );
+    graphicsView->setSceneRect(-10000,-10000,20000,20000);
+
+    layout->addWidget(graphicsView);
 
     // connect(
     //     smm,
