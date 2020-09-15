@@ -1,23 +1,38 @@
 #pragma once
 
-#include <QGraphicsItem>
+#include <QGraphicsPathItem>
 
-class Edge : public QGraphicsItem {
-public:
-    Edge(const Node const* n0, const Node const* n1, GraphWidget *graphWidget);
+class NodeEditorScene;
+class Node;
+class NodeRegistry;
 
-    QRectF boundingRect() const override;
-    QPainterPath shape() const override;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+class Edge : public QObject, public QGraphicsPathItem {
+    Q_OBJECT
 
-protected:
-    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+    public:
+        Edge(
+            Node* producer,
+            int producerOutputPortIdx,
+            Node* consumer,
+            int consumerInputPortIdx,
+            QGraphicsItem *parent = nullptr
+        );
+        ~Edge();
 
-    // void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-    // void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+        std::string print();
 
-private:
+    protected:
+        void updateEndPoints();
+        QRectF boundingRect() const override;
+        void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
-    const Node const* n0;
-    const Node const* n1;
+    private:
+        QPen* edgePen;
+        QPointF oPoint;
+        QPointF iPoint;
+
+        Node* producer;
+        int producerOutputPortIdx;
+        Node* consumer;
+        int consumerInputPortIdx;
 };

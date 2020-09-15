@@ -1,35 +1,14 @@
-
 #pragma once
 
 #include <QDockWidget>
 
-#include <QGraphicsScene>
-#include <QGraphicsView>
-#include <QGraphicsItem>
-
-#include <unordered_map>
-
-
-class NodeEditor : public QDockWidget
-{
+/// This is the root widget of the node editor that can be docked
+class NodeEditor : public QDockWidget {
   Q_OBJECT
 
 public:
+  NodeEditor(QWidget *parent = nullptr);
+  NodeEditor(const QString &title, QWidget *parent = nullptr);
+  ~NodeEditor();
 
-  NodeEditor(QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags())
-    : QDockWidget(parent, flags)
-  {
-    this->constructor();
-  }
-
-  NodeEditor(const QString &title, QWidget *parent = nullptr, Qt::WindowFlags flags = Qt::WindowFlags())
-    : QDockWidget(title, parent, flags)
-  {
-    this->constructor();
-  }
-
-  ~NodeEditor(){}
-
-private:
-  void constructor();
 };

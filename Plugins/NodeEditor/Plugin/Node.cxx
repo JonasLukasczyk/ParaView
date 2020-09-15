@@ -1,14 +1,14 @@
 #include <Node.h>
 
 #include <QPainter>
-#include <QRadialGradient>
 #include <QStyleOptionGraphicsItem>
+#include <QApplication>
+
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
-#include <QApplication>
+#include <QGraphicsEllipseItem>
 
 // #include "pqProxyWidget.h"
 #include "pqProxiesWidget.h"
@@ -19,50 +19,48 @@
 #include "pqOutputPort.h"
 #include <vtkSMProxy.h>
 
+#include "Edge.h"
 
 #include <iostream>
+#include <sstream>
 
 class ResizeInterceptor : public QObject {
     public:
         Node* node;
-
-        ResizeInterceptor(Node* n) : QObject(n->container){
+        ResizeInterceptor(Node* n) : QObject(n->getWidgetContainer()){
             this->node = n;
         }
-
         bool eventFilter(QObject *object, QEvent *event){
-            // std::cout<<"Intercepted: "<<event->type()<<std::endl;
-            if(event->type()==QEvent::LayoutRequest){
-
-                this->node->container->resize(
-                    this->node->container->layout()->sizeHint()
-                );
-                this->node->prepareGeometryChange();
-            }
+            if(event->type()==QEvent::LayoutRequest)
+                this->node->resize();
             return false;
         }
 };
 
-Node::Node(QGraphicsScene* scene, pqPipelineSource* source, QGraphicsItem *parent) : QGraphicsItem(parent) {
-    std::cout<<"NewNode"<<std::endl;
+int todoXOffset = 0;
 
-    this->source = source;
+Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
+    QObject(),
+    QGraphicsItem(parent),
+    source(source)
+{
+    std::cout<<"Creating Node: "<< this->print() <<std::endl;
+
+    this->setPos(
+        todoXOffset+=400,
+        0
+    );
 
     this->setFlag(ItemIsMovable);
     this->setFlag(ItemSendsGeometryChanges);
     this->setCacheMode(DeviceCoordinateCache);
-    this->setZValue(-1);
+    this->setZValue(1);
 
-    scene->addItem(this);
+    this->widgetContainer = new QWidget;
+    this->widgetContainer->setMinimumWidth(this->width);
+    this->widgetContainer->setMaximumWidth(this->width);
 
-    this->container = new QWidget;
-    auto containerLayout = new QVBoxLayout;
-    this->container->setLayout(containerLayout);
-
-    this->container->setMinimumWidth(this->width);
-    this->container->setMaximumWidth(this->width);
-
-    this->container->installEventFilter(
+    this->widgetContainer->installEventFilter(
         new ResizeInterceptor(this)
     );
 
@@ -76,8 +74,7 @@ Node::Node(QGraphicsScene* scene, pqPipelineSource* source, QGraphicsItem *paren
 
     // label
     {
-        auto label = scene->addText("");
-        label->setParentItem(this);
+        auto label = new QGraphicsTextItem("", this);
         label->setPos(
             0,
             -this->portContainerHeight - this->labelHeight
@@ -98,26 +95,35 @@ Node::Node(QGraphicsScene* scene, pqPipelineSource* source, QGraphicsItem *paren
         auto addPort = [=](const int x, const int y, const QString& portLabel){
             bool isInputPort = x<0;
 
-            auto label = scene->addText("");
-            label->setParentItem(this);
+            auto label = new QGraphicsTextItem("", this);
             label->setPos(
-                isInputPort ? this->padding : this->width*0.5,
+                isInputPort
+                    ? 2*this->padding
+                    : this->width*0.5,
                 y-this->portRadius-3
             );
-            label->setTextWidth(0.5*this->width-this->padding);
+            label->setTextWidth(0.5*this->width - 2*this->padding);
             // label->setHtml("<h4 align='right'>"+port->getPortName()+"&lt;"+port->getDataClassName()+"&gt;</h4>");
             label->setHtml("<h4 align='"+QString(isInputPort ? "left" : "right")+"'>"+portLabel+"</h4>");
 
-            scene
-                ->addEllipse(
-                    x-this->portRadius,
-                    y-this->portRadius,
-                    2*this->portRadius,
-                    2*this->portRadius,
-                    pen,
-                    QBrush(Qt::red)
-                )
-                ->setParentItem(this);
+            auto port = new QGraphicsEllipseItem(
+                -this->portRadius,
+                -this->portRadius,
+                2*this->portRadius,
+                2*this->portRadius,
+                this
+            );
+            port->setPos(
+                x,
+                y
+            );
+            port->setPen(pen);
+            port->setBrush( palette.dark() );
+
+            if(isInputPort)
+                this->iPorts.push_back( port );
+            else
+                this->oPorts.push_back( port );
         };
 
         for(int i=0; i<nInputPorts; i++){
@@ -143,6 +149,8 @@ Node::Node(QGraphicsScene* scene, pqPipelineSource* source, QGraphicsItem *paren
         proxiesWidget->addProxy( source->getProxy(), "Properties" );
         proxiesWidget->updateLayout();
         proxiesWidget->filterWidgets(true);
+
+        auto containerLayout = new QVBoxLayout;
         containerLayout->addWidget(proxiesWidget);
 
         QObject::connect(
@@ -152,123 +160,74 @@ Node::Node(QGraphicsScene* scene, pqPipelineSource* source, QGraphicsItem *paren
                 this->source->setModifiedState(pqProxy::MODIFIED);
             }
         );
+
+        this->widgetContainer->setLayout(containerLayout);
     }
 
     // embed widget in scene
     {
-        auto graphicsWidget = scene->addWidget(this->container);
-        graphicsWidget->setParentItem(this);
-        graphicsWidget->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+        auto graphicsProxyWidget = new QGraphicsProxyWidget(this);
+        graphicsProxyWidget->setWidget( this->widgetContainer );
+        graphicsProxyWidget->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
     }
-
-    // this->container->installEventFilter( new XXXX(this) );
-    // this->container->resize(containerLayout->sizeHint());
-
-    // // test->filterWidgets(true);
-    // auto test = new pqProxiesWidget(innerWidget);
-
-    // layout->addWidget(test);
-
-    // // QObject::connect(
-    // //     test, &pqProxiesWidget::restartRequired,
-    // //     [=](vtkSMProxy *proxy){
-    // //         std::cout<<"xxxx"<<std::endl;
-    // //         // source->modifiedStateChanged(proxy);
-    // //         // source->setModifiedState( pqPipelineSource::MODIFIED );
-    // //         source->updatePipeline();
-    // //     }
-    // // );
-
-
-    // // layout->addWidget(new QPushButton("A"));
-    // // layout->addWidget(new QPushButton("B"));
-    // // layout->addWidget(new QPushButton("C"));
-    // // layout->addWidget(new QPushButton("D"));
-
-
-
-
-    // innerWidget->resize(layout->sizeHint());
-
-    // scene->addItem(this);
-
-    // auto proxy = scene->addWidget(innerWidget);
-    // proxy->setParentItem(this);
-    // proxy->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
-
-    // this->innerWidth = innerWidget->width();
-    // this->innerHeight = innerWidget->height();
-    // // this->innerWidth = innerWidget->width();
-    // // this->innerHeight = innerWidget->height();
 }
 
 Node::~Node(){
-    // std::cout<<"Destroyed"<<std::endl;
-    // if(this->container)
-    delete this->container;
+    std::cout<<"Deleting Node: "<< this->print() <<std::endl;
+    delete this->widgetContainer;
 }
 
-// int Node::getPortContainerHeight()const{
-//     auto nOutputPorts = this->source->getNumberOfOutputPorts();
-//     int nInputPorts = 0;
-//     // auto sourceAsFilter = pqPipelineFilter
-//     if(this->source->IsA("pqPipelineFilter")){
-//         nInputPorts = ((pqPipelineFilter*) this->source )->getNumberOfInputPorts();
-//     }
-//     return nOutputPorts*this->portHeight;
-// }
+int Node::resize(){
+    this->widgetContainer->resize(
+        this->widgetContainer->layout()->sizeHint()
+    );
+    this->prepareGeometryChange();
 
-QRectF Node::boundingRect() const{
-    // qreal adjust = 2;
-    // return QRectF( -10 - adjust, -10 - adjust, 23 + adjust, 23 + adjust);
-    // if(!this->container)
-        // return QRectF(0,0,0,0);
+    return 1;
+}
 
+int Node::setState(int state){
+    this->state = state;
+
+    this->update(this->boundingRect());
+
+    return this->state;
+}
+
+std::string Node::print(){
+    std::stringstream ss;
+    ss
+        <<this->source->getSMName().toStdString()
+        <<"<"<<this->source->getProxy()->GetGlobalID()<<">"
+    ;
+    return ss.str();
+}
+
+QVariant Node::itemChange(GraphicsItemChange change, const QVariant &value){
+    switch (change) {
+        case ItemPositionHasChanged:
+            emit this->nodeMoved();
+            break;
+        default:
+            break;
+    };
+
+    return QGraphicsItem::itemChange(change, value);
+}
+
+QRectF Node::boundingRect() const {
     auto offset = this->borderWidth+this->padding;
-    // auto nInputPorts = this->source->;
-    // std::cout<<portOffset<<std::endl;
 
     return QRectF(
         -offset,
         -offset - this->portContainerHeight - this->labelHeight,
-        this->container->width()  + 2*offset,
-        this->container->height() + 2*offset + this->portContainerHeight + this->labelHeight
+        this->widgetContainer->width()  + 2*offset,
+        this->widgetContainer->height() + 2*offset + this->portContainerHeight + this->labelHeight
     );
 }
 
-// QPainterPath Node::shape() const
-// {
-//     QPainterPath path;
-//     path.addEllipse(-10, -10, 20, 20);
-//     return path;
-// }
-
-// QVariant Node::itemChange(GraphicsItemChange change, const QVariant &value)
-// {
-//     switch (change) {
-//     case ItemPositionHasChanged:
-//         // for (Edge *edge : qAsConst(edg-this->borderWidtheList))
-//         //     edge->adjust();
-//         // graph->itemMoved();
-//         break;
-//     default:
-//         break;
-//     };
-
-//     return QGraphicsItem::itemChange(change, value);
-// }
-
-void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *)
-{
+void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *){
     // std::cout<<"RENDERING"<<std::endl;
-    // if(this->clear){
-    //     painter->eraseRect( this->boundingRect() );
-    //     return;
-    // }
-
-    // painter->setPen(Qt::NoPen);
-    // painter->setRenderHint(QPainter::Antialiasing);
-
     auto palette = QApplication::palette();
 
     QPainterPath path;
@@ -276,45 +235,18 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
         QRect(
             -this->padding,
             -this->padding - this->portContainerHeight - this->labelHeight,
-            this->container->width() + 2*this->padding,
-            this->container->height() + 2*this->padding + this->portContainerHeight + this->labelHeight
+            this->widgetContainer->width() + 2*this->padding,
+            this->widgetContainer->height() + 2*this->padding + this->portContainerHeight + this->labelHeight
         ),
         10, 10
     );
-    QPen pen(palette.light(), this->borderWidth);
+    QPen pen(
+        this->state
+            ? palette.highlight()
+            : palette.light(),
+        this->borderWidth
+    );
     painter->setPen(pen);
     painter->fillPath(path, palette.window());
     painter->drawPath(path);
-
-    // auto nPorts =
-
-
-
-
-
-    // painter->drawRect(
-    //     -this->padding,
-    //     -this->padding,
-    //     this->innerWidth+2*this->padding,
-    //     this->innerHeight+2*this->padding
-    // );
-
-    // painter->setBrush(Qt::red);
-    // painter->drawEllipse(0, -5, 10,10);
-    // painter->drawRect(-this->padding, -this->padding, this->width+2*this->padding, this->height+2*this->padding);
-
-    // QRadialGradient gradient(-3, -3, 10);
-    // if (option->state & QStyle::State_Sunken) {
-    //     gradient.setCenter(3, 3);
-    //     gradient.setFocalPoint(3, 3);
-    //     gradient.setColorAt(1, QColor(Qt::yellow).lighter(120));
-    //     gradient.setColorAt(0, QColor(Qt::darkYellow).lighter(120));
-    // } else {
-    //     gradient.setColorAt(0, Qt::yellow);
-    //     gradient.setColorAt(1, Qt::darkYellow);
-    // }
-    // painter->setBrush(gradient);
-
-    // painter->setPen(QPen(Qt::black, 0));
-    // painter->drawEllipse(-10, -10, 20, 20);
 }

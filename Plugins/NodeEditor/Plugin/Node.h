@@ -1,45 +1,77 @@
 #pragma once
 
 #include <QGraphicsItem>
+#include <QGraphicsSceneMouseEvent>
 
-class QGraphicsScene;
 class pqPipelineSource;
 class pqServerManagerModel;
 
 class QWidget;
+class QGraphicsEllipseItem;
 
-class Node : public QGraphicsItem {
+class Edge;
+class Node : public QObject, public QGraphicsItem {
+    Q_OBJECT
 
-public:
-    Node(QGraphicsScene* scene, pqPipelineSource* source, QGraphicsItem *parent = nullptr);
-    ~Node();
+    public:
+        /// Creates a node for a pqPipelineSource element that consists of
+        /// * an encapsulating rectangle
+        /// * input and output ports
+        /// * a widgetContainer for properties (in the future also display)
+        Node(pqPipelineSource* source, QGraphicsItem *parent = nullptr);
+        ~Node();
 
-    QRectF boundingRect() const override;
-    // QPainterPath shape() const override;
+        /// Delete copy constructors
+        Node(const Node&) =delete;
+        Node& operator=(const Node&) =delete;
 
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+        int setState(int state);
 
-    void prepareGeometryChange(){
-        QGraphicsItem::prepareGeometryChange();
-    }
+        pqPipelineSource* getSource(){
+            return this->source;
+        }
+        std::vector<QGraphicsEllipseItem*>& getInputPorts(){
+            return this->iPorts;
+        }
+        std::vector<QGraphicsEllipseItem*>& getOutputPorts(){
+            return this->oPorts;
+        }
+        QWidget* getWidgetContainer(){
+            return this->widgetContainer;
+        }
 
-protected:
-    // QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+        int resize();
 
-    // void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-    // void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+        std::string print();
 
-public:
-    pqPipelineSource* source;
-    QWidget* container;
+    signals:
+        void nodeMoved();
+        void nodeClicked();
 
-    int labelHeight{35};
-    int padding{4};
-    int borderWidth{4};
-    int width{300};
-    int portHeight{30};
-    int portRadius{10};
-    int portContainerHeight{0};
+    protected:
+        QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+        void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+        QRectF boundingRect() const override;
 
-    // static std::map<int,Node> N
+        void mousePressEvent(QGraphicsSceneMouseEvent * event){
+            QGraphicsItem::mousePressEvent(event);
+            emit nodeClicked();
+        }
+
+    private:
+        pqPipelineSource* source;
+        QWidget* widgetContainer;
+
+        std::vector<QGraphicsEllipseItem*> iPorts;
+        std::vector<QGraphicsEllipseItem*> oPorts;
+
+        int state{0}; // 0: normal, 1: selected
+
+        int labelHeight{35};
+        int padding{4};
+        int borderWidth{4};
+        int width{300};
+        int portHeight{30};
+        int portRadius{10};
+        int portContainerHeight{0};
 };
