@@ -1,15 +1,19 @@
-#include "Edge.h"
+#include <Edge.h>
 
-#include "Node.h"
-#include "NodeEditorScene.h"
+// node editor includes
+#include <Node.h>
+#include <NodeEditorScene.h>
 
-#include "pqPipelineSource.h"
-#include "vtkSMProxy.h"
+// paraview/vtk includes
+#include <pqPipelineSource.h>
+#include <vtkSMProxy.h>
 
+// qt includes
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 #include <QApplication>
 
+// std includes
 #include <iostream>
 #include <sstream>
 

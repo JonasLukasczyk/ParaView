@@ -1,9 +1,13 @@
-#include "NodeEditor.h"
+#include <NodeEditor.h>
 
+// node editor includes
+#include <NodeEditorScene.h>
+#include <NodeEditorView.h>
+
+// qt includes
+#include <QGraphicsView>
 #include <QVBoxLayout>
-
-#include "NodeEditorView.h"
-#include "NodeEditorScene.h"
+#include <QEvent>
 
 NodeEditor::NodeEditor(const QString &title, QWidget *parent) : QDockWidget(title, parent){
     // create inner widget
@@ -14,12 +18,15 @@ NodeEditor::NodeEditor(const QString &title, QWidget *parent) : QDockWidget(titl
     t_widget->setLayout(layout);
 
     // create node editor scene and view
-    auto graphicsView = new NodeEditorView;
-    graphicsView->setScene( new QGraphicsView(this) );
-    graphicsView->setDragMode( QGraphicsView::ScrollHandDrag );
-    graphicsView->setSceneRect(-10000,-10000,20000,20000);
-    layout->addWidget(graphicsView);
+    auto view = new NodeEditorView(
+        new NodeEditorScene(this),
+        this
+    );
+    view->setDragMode( QGraphicsView::ScrollHandDrag );
+    view->setSceneRect(-10000,-10000,20000,20000);
+    layout->addWidget(view);
 
+    // set widget
     this->setWidget(t_widget);
 }
 

@@ -1,29 +1,33 @@
 #include <Node.h>
 
+// node editor includes
+#include <Edge.h>
+
+// qt includes
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 #include <QApplication>
-
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsEllipseItem>
 
-// #include "pqProxyWidget.h"
-#include "pqProxiesWidget.h"
-
-#include "pqServerManagerModel.h"
-#include "pqPipelineSource.h"
-#include "pqPipelineFilter.h"
-#include "pqOutputPort.h"
+// paraview/vtk includes
+#include <pqProxiesWidget.h>
+#include <pqServerManagerModel.h>
+#include <pqPipelineSource.h>
+#include <pqPipelineFilter.h>
+#include <pqOutputPort.h>
 #include <vtkSMProxy.h>
 
-#include "Edge.h"
-
+// std includes
 #include <iostream>
 #include <sstream>
 
+// Instead of subclassing the widgetContainer I install an event filter to detect
+// resize events within the cotainer which triggers a resize of the entire node.
+// TODO: find better way to do this
 class ResizeInterceptor : public QObject {
     public:
         Node* node;
@@ -32,12 +36,15 @@ class ResizeInterceptor : public QObject {
         }
         bool eventFilter(QObject *object, QEvent *event){
             if(event->type()==QEvent::LayoutRequest)
-                this->node->resize();
+                this->node->updateSize();
             return false;
         }
 };
 
-int todoXOffset = 0;
+
+// TODO: this variable is currently used to position nodes by creation in a line
+// In the future this will be replaced with a layout algorithm
+int todoXOffset = -400;
 
 Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
     QObject(),
@@ -46,24 +53,29 @@ Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
 {
     std::cout<<"Creating Node: "<< this->print() <<std::endl;
 
+    // set initial position
     this->setPos(
         todoXOffset+=400,
         0
     );
 
+    // set options
     this->setFlag(ItemIsMovable);
     this->setFlag(ItemSendsGeometryChanges);
     this->setCacheMode(DeviceCoordinateCache);
     this->setZValue(1);
 
+    // create a widget container for property and display widgets
     this->widgetContainer = new QWidget;
     this->widgetContainer->setMinimumWidth(this->width);
     this->widgetContainer->setMaximumWidth(this->width);
 
+    // install resize event filter
     this->widgetContainer->installEventFilter(
         new ResizeInterceptor(this)
     );
 
+    // determine number of input and output ports
     int nOutputPorts = this->source->getNumberOfOutputPorts();
     int nInputPorts = 0;
     auto sourceAsFilter = dynamic_cast<pqPipelineFilter*>(this->source);
@@ -72,7 +84,7 @@ Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
     }
     this->portContainerHeight = std::max(nOutputPorts,nInputPorts)*this->portHeight;
 
-    // label
+    // create label
     {
         auto label = new QGraphicsTextItem("", this);
         label->setPos(
@@ -87,7 +99,7 @@ Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
         );
     }
 
-    // ports
+    // create ports
     {
         auto palette = QApplication::palette();
         QPen pen(palette.light(), this->borderWidth);
@@ -143,7 +155,7 @@ Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
         }
     }
 
-    // proxy widgets
+    // create property widgets (in the future also display widgets)
     {
         auto proxiesWidget = new pqProxiesWidget;
         proxiesWidget->addProxy( source->getProxy(), "Properties" );
@@ -164,7 +176,7 @@ Node::Node(pqPipelineSource* source, QGraphicsItem *parent) :
         this->widgetContainer->setLayout(containerLayout);
     }
 
-    // embed widget in scene
+    // embed widget container in node
     {
         auto graphicsProxyWidget = new QGraphicsProxyWidget(this);
         graphicsProxyWidget->setWidget( this->widgetContainer );
@@ -177,7 +189,7 @@ Node::~Node(){
     delete this->widgetContainer;
 }
 
-int Node::resize(){
+int Node::updateSize(){
     this->widgetContainer->resize(
         this->widgetContainer->layout()->sizeHint()
     );
@@ -227,7 +239,6 @@ QRectF Node::boundingRect() const {
 }
 
 void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *){
-    // std::cout<<"RENDERING"<<std::endl;
     auto palette = QApplication::palette();
 
     QPainterPath path;
@@ -246,6 +257,8 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
             : palette.light(),
         this->borderWidth
     );
+
+    painter->setRenderHints(QPainter::HighQualityAntialiasing);
     painter->setPen(pen);
     painter->fillPath(path, palette.window());
     painter->drawPath(path);

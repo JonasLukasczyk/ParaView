@@ -1,15 +1,16 @@
 #pragma once
 
+// QT includes
 #include <QGraphicsItem>
 #include <QGraphicsSceneMouseEvent>
 
+// forward declarations
 class pqPipelineSource;
 class pqServerManagerModel;
-
 class QWidget;
 class QGraphicsEllipseItem;
-
 class Edge;
+
 class Node : public QObject, public QGraphicsItem {
     Q_OBJECT
 
@@ -21,27 +22,38 @@ class Node : public QObject, public QGraphicsItem {
         Node(pqPipelineSource* source, QGraphicsItem *parent = nullptr);
         ~Node();
 
-        /// Delete copy constructors
+        /// Delete copy constructor.
         Node(const Node&) =delete;
+        /// Delete copy constructor.
         Node& operator=(const Node&) =delete;
 
+        /// Set the state of the node (0: normal, 1: selected)
         int setState(int state);
 
+        /// Get corresponding pipeline source of the node.
         pqPipelineSource* getSource(){
             return this->source;
         }
+
+        /// Get input ports of the node.
         std::vector<QGraphicsEllipseItem*>& getInputPorts(){
             return this->iPorts;
         }
+
+        /// Get output ports of the node.
         std::vector<QGraphicsEllipseItem*>& getOutputPorts(){
             return this->oPorts;
         }
+
+        /// Get widget container of the node.
         QWidget* getWidgetContainer(){
             return this->widgetContainer;
         }
 
-        int resize();
+        /// Update the size of the node to fit its contents.
+        int updateSize();
 
+        /// Print node information.
         std::string print();
 
     signals:

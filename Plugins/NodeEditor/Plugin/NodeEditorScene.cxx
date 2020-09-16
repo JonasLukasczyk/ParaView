@@ -1,19 +1,23 @@
-#include "NodeEditorScene.h"
+#include <NodeEditorScene.h>
 
+// node editor includes
+#include <Node.h>
+#include <Edge.h>
+
+// qt includes
 #include <QPainter>
 
-#include "pqApplicationCore.h"
-#include "pqServerManagerModel.h"
-#include "pqPipelineSource.h"
-#include "pqPipelineFilter.h"
-#include "pqActiveObjects.h"
-#include "pqOutputPort.h"
-#include "pqView.h"
-#include "vtkSMProxy.h"
+// paraview/vtk includes
+#include <pqApplicationCore.h>
+#include <pqServerManagerModel.h>
+#include <pqPipelineSource.h>
+#include <pqPipelineFilter.h>
+#include <pqActiveObjects.h>
+#include <pqOutputPort.h>
+#include <pqView.h>
+#include <vtkSMProxy.h>
 
-#include "Node.h"
-#include "Edge.h"
-
+// std includes
 #include <iostream>
 
 NodeEditorScene::NodeEditorScene(QObject* parent) : QGraphicsScene(parent){

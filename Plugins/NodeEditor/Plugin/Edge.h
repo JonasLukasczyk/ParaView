@@ -1,11 +1,14 @@
 #pragma once
 
+// QT includes
 #include <QGraphicsPathItem>
 
-class NodeEditorScene;
+// forward declarations
 class Node;
-class NodeRegistry;
 
+/// Every instance of this class corresponds to an edge between an output port
+/// and an input port. This class internally detects if the positions of the
+/// corresponding ports change and updates itself automatically.
 class Edge : public QObject, public QGraphicsPathItem {
     Q_OBJECT
 
@@ -19,6 +22,7 @@ class Edge : public QObject, public QGraphicsPathItem {
         );
         ~Edge();
 
+        /// Print edge information.
         std::string print();
 
     protected:
